@@ -268,6 +268,160 @@ class _PlacesAutocompleteResult extends State<PlacesAutocompleteResult> {
   }
 }
 
+class AppBarPlacesAutoCompleteAppBar extends StatefulWidget
+    implements PreferredSizeWidget {
+  final InputDecoration? textDecoration;
+  final TextStyle? textStyle;
+  final backPressed;
+  final clearPressed;
+  final goPressed;
+  final onChanged;
+  final Color? backgroundColor;
+  final String? hintText;
+  final Color? hintTextColor;
+  final Color? textColor;
+  final String? initialText;
+  final bool showBackButton;
+
+  AppBarPlacesAutoCompleteAppBar(
+      {Key? key,
+        this.textColor,
+        this.initialText,
+        this.onChanged,
+        this.goPressed,
+        this.hintTextColor,
+        this.hintText,
+        this.textDecoration,
+        this.textStyle,
+        this.clearPressed,
+        this.backPressed,
+        this.backgroundColor, this.showBackButton = true})
+      : preferredSize = Size.fromHeight(kToolbarHeight),
+        super(key: key);
+
+  @override
+  _AppBarPlacesAutoCompleteAppBarState createState() =>
+      _AppBarPlacesAutoCompleteAppBarState();
+
+  @override
+  final Size preferredSize;
+}
+
+class _AppBarPlacesAutoCompleteAppBarState
+    extends State<AppBarPlacesAutoCompleteAppBar> {
+  PlacesAutocompleteState? state;
+  bool initialized = false;
+
+  void goPressed(String value) {
+    widget.goPressed();
+    state!.queryTextController!.text =
+        state!._response!.predictions!.first!.description!;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    state = PlacesAutocompleteWidget.of(context);
+    assert(state != null);
+
+    if (!initialized) {
+      initialized = true;
+      if (widget.initialText != null) {
+        setState(() {
+          state!.queryTextController!.text = widget.initialText!;
+          print('appbarplacesautocomplete text = ${state!.queryTextController!.text}');
+        });
+      }
+    }
+
+    print('returning app bar');
+
+    return AppBar(
+      backgroundColor: widget.backgroundColor ?? Colors.white,
+      leading: widget.showBackButton ? IconButton(
+        icon: Icon(Icons.arrow_back_ios),
+        onPressed: () {
+          widget.backPressed();
+        },
+      ) : IconButton(
+        icon: Icon(Icons.search),
+        onPressed: () {
+          widget.backPressed();
+        },
+      ),
+      actions: <Widget>[
+        IconButton(
+          icon: Icon(
+            Icons.clear,
+            color: Colors.white,
+          ),
+          onPressed: () {
+            setState(() {
+              state!.queryTextController!.text = '';
+              widget.clearPressed();
+            });
+          },
+        ),
+      ],
+      title: Container(
+        alignment: Alignment.topLeft,
+        margin: EdgeInsets.only(top: 4.0),
+        child: TextFormField(
+          textInputAction: TextInputAction.go,
+          onFieldSubmitted: goPressed,
+          onChanged: widget.onChanged,
+          controller: state!.queryTextController,
+          maxLines: 1,
+          keyboardType: TextInputType.text,
+          autofocus: false,
+          style: TextStyle(
+            color: widget.textColor ?? Colors.white,
+            fontSize: 20,
+          ),
+          decoration: new InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: TextStyle(
+              color: widget.hintTextColor ?? Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+
+//        TextField(
+//          controller: state._queryTextController,
+//          autofocus: true,
+//          style: widget.textStyle ?? _defaultStyle(),
+//          decoration: widget.textDecoration ?? _defaultDecoration(state.widget.hint),
+//        ));
+  }
+
+  InputDecoration _defaultDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: Theme.of(context).brightness == Brightness.light
+          ? Colors.white30
+          : Colors.black38,
+      hintStyle: TextStyle(
+        color: Theme.of(context).brightness == Brightness.light
+            ? Colors.black38
+            : Colors.white30,
+        fontSize: 16.0,
+      ),
+      border: InputBorder.none,
+    );
+  }
+
+  TextStyle _defaultStyle() {
+    return TextStyle(
+      color: Theme.of(context).brightness == Brightness.light
+          ? Colors.black.withOpacity(0.9)
+          : Colors.white.withOpacity(0.9),
+      fontSize: 16.0,
+    );
+  }
+}
+
 class AppBarPlacesAutoCompleteTextField extends StatefulWidget {
   final InputDecoration? textDecoration;
   final TextStyle? textStyle;
