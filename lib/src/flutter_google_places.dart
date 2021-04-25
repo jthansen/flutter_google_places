@@ -544,3 +544,37 @@ class PlacesAutocomplete {
     return Navigator.push(context, MaterialPageRoute(builder: builder));
   }
 }
+
+class PlacesAutocompleteResult extends StatefulWidget {
+  final ValueChanged<Prediction> onTap;
+  final Widget logo;
+  final Color tileColor;
+
+  PlacesAutocompleteResult({this.onTap, this.logo, this.tileColor});
+
+  @override
+  _PlacesAutocompleteResult createState() => _PlacesAutocompleteResult();
+}
+
+class _PlacesAutocompleteResult extends State<PlacesAutocompleteResult> {
+  @override
+  Widget build(BuildContext context) {
+    final state = PlacesAutocompleteWidget.of(context);
+    assert(state != null);
+    if (state.queryTextController.text.isEmpty ||
+        state._response == null ||
+        state._response.predictions.isEmpty) {
+      final children = <Widget>[];
+      if (state._searching) {
+        children.add(_Loader());
+      }
+      children.add(widget.logo ?? PoweredByGoogleImage());
+      return Stack(children: children);
+    }
+    return PredictionsListView(
+      predictions: state._response.predictions,
+      onTap: widget.onTap,
+      tileColor: widget.tileColor ?? Colors.transparent,
+    );
+  }
+}
