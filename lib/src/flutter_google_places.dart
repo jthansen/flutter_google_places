@@ -152,7 +152,7 @@ class _PlacesAutocompleteOverlayState extends PlacesAutocompleteState {
         children: <Widget>[_Loader()],
         alignment: FractionalOffset.bottomCenter,
       );
-    } else if (_queryTextController!.text.isEmpty ||
+    } else if (queryTextController!.text.isEmpty ||
         _response == null ||
         _response!.predictions.isEmpty) {
       body = Material(
@@ -203,7 +203,7 @@ class _PlacesAutocompleteOverlayState extends PlacesAutocompleteState {
       : Icon(Icons.arrow_back);
 
   Widget _textField(BuildContext context) => TextField(
-        controller: _queryTextController,
+        controller: queryTextController,
         autofocus: true,
         style: TextStyle(
             color: Theme.of(context).brightness == Brightness.light
@@ -236,8 +236,9 @@ class _Loader extends StatelessWidget {
 class PlacesAutocompleteResult extends StatefulWidget {
   final ValueChanged<Prediction>? onTap;
   final Widget? logo;
+  final Color? tileColor; 
 
-  PlacesAutocompleteResult({this.onTap, this.logo});
+  PlacesAutocompleteResult({this.onTap, this.logo, this.tileColor});
 
   @override
   _PlacesAutocompleteResult createState() => _PlacesAutocompleteResult();
@@ -249,7 +250,7 @@ class _PlacesAutocompleteResult extends State<PlacesAutocompleteResult> {
     final state = PlacesAutocompleteWidget.of(context)!;
     assert(state != null);
 
-    if (state._queryTextController!.text.isEmpty ||
+    if (state.queryTextController!.text.isEmpty ||
         state._response == null ||
         state._response!.predictions.isEmpty) {
       final children = <Widget>[];
@@ -262,6 +263,7 @@ class _PlacesAutocompleteResult extends State<PlacesAutocompleteResult> {
     return PredictionsListView(
       predictions: state._response!.predictions,
       onTap: widget.onTap,
+      tileColor: widget.tileColor ?? Colors.transparent,
     );
   }
 }
@@ -290,7 +292,7 @@ class _AppBarPlacesAutoCompleteTextFieldState
         alignment: Alignment.topLeft,
         margin: EdgeInsets.only(top: 4.0),
         child: TextField(
-          controller: state._queryTextController,
+          controller: state.queryTextController,
           autofocus: true,
           style: widget.textStyle ?? _defaultStyle(),
           decoration:
@@ -349,14 +351,15 @@ class PoweredByGoogleImage extends StatelessWidget {
 class PredictionsListView extends StatelessWidget {
   final List<Prediction> predictions;
   final ValueChanged<Prediction>? onTap;
+  final Color? tileColor; 
 
-  PredictionsListView({required this.predictions, this.onTap});
+  PredictionsListView({required this.predictions, this.onTap, this.tileColor});
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       children: predictions
-          .map((Prediction p) => PredictionTile(prediction: p, onTap: onTap))
+          .map((Prediction p) => PredictionTile(prediction: p, onTap: onTap, tileColor: this.tileColor ?? Colors.transparent))
           .toList(),
     );
   }
@@ -365,19 +368,26 @@ class PredictionsListView extends StatelessWidget {
 class PredictionTile extends StatelessWidget {
   final Prediction prediction;
   final ValueChanged<Prediction>? onTap;
+  final Color? tileColor;
 
-  PredictionTile({required this.prediction, this.onTap});
+  PredictionTile({required this.prediction, this.onTap, this.tileColor});
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(Icons.location_on),
-      title: Text(prediction.description!),
-      onTap: () {
-        if (onTap != null) {
-          onTap!(prediction);
-        }
-      },
+    final state = PlacesAutocompleteWidget.of(context);
+    assert(state != null);
+    return Container( 
+      color: this.tileColor ?? Colors.transparent,
+      child: ListTile(
+        leading: Icon(Icons.location_on),
+        title: Text(prediction.description!),
+        onTap: () {
+          if (onTap != null) {
+            onTap!(prediction);
+          }
+          state!.queryTextController!.text = prediction.description!;
+        },
+      ),
     );
   }
 }
@@ -385,7 +395,7 @@ class PredictionTile extends StatelessWidget {
 enum Mode { overlay, fullscreen }
 
 abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
-  TextEditingController? _queryTextController;
+  TextEditingController? queryTextController;
   PlacesAutocompleteResponse? _response;
   GoogleMapsPlaces? _places;
   late bool _searching;
@@ -397,8 +407,8 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
   void initState() {
     super.initState();
 
-    _queryTextController = TextEditingController(text: widget.startText);
-    _queryTextController!.selection = new TextSelection(
+    queryTextController = TextEditingController(text: widget.startText);
+    queryTextController!.selection = new TextSelection(
       baseOffset: 0,
       extentOffset: widget.startText?.length ?? 0,
     );
@@ -406,7 +416,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
     _initPlaces();
     _searching = false;
 
-    _queryTextController!.addListener(_onQueryChange);
+    queryTextController!.addListener(_onQueryChange);
 
     _queryBehavior.stream.listen(doSearch);
   }
@@ -454,7 +464,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(Duration(milliseconds: widget.debounce), () {
       if (!_queryBehavior.isClosed) {
-        _queryBehavior.add(_queryTextController!.text);
+        _queryBehavior.add(queryTextController!.text);
       }
     });
   }
@@ -466,7 +476,7 @@ abstract class PlacesAutocompleteState extends State<PlacesAutocompleteWidget> {
     _places!.dispose();
     _debounce!.cancel();
     _queryBehavior.close();
-    _queryTextController!.removeListener(_onQueryChange);
+    queryTextController!.removeListener(_onQueryChange);
   }
 
   @mustCallSuper
@@ -542,39 +552,5 @@ class PlacesAutocomplete {
       return showDialog(context: context, builder: builder);
     }
     return Navigator.push(context, MaterialPageRoute(builder: builder));
-  }
-}
-
-class PlacesAutocompleteResult extends StatefulWidget {
-  final ValueChanged<Prediction> onTap;
-  final Widget logo;
-  final Color tileColor;
-
-  PlacesAutocompleteResult({this.onTap, this.logo, this.tileColor});
-
-  @override
-  _PlacesAutocompleteResult createState() => _PlacesAutocompleteResult();
-}
-
-class _PlacesAutocompleteResult extends State<PlacesAutocompleteResult> {
-  @override
-  Widget build(BuildContext context) {
-    final state = PlacesAutocompleteWidget.of(context);
-    assert(state != null);
-    if (state.queryTextController.text.isEmpty ||
-        state._response == null ||
-        state._response.predictions.isEmpty) {
-      final children = <Widget>[];
-      if (state._searching) {
-        children.add(_Loader());
-      }
-      children.add(widget.logo ?? PoweredByGoogleImage());
-      return Stack(children: children);
-    }
-    return PredictionsListView(
-      predictions: state._response.predictions,
-      onTap: widget.onTap,
-      tileColor: widget.tileColor ?? Colors.transparent,
-    );
   }
 }
